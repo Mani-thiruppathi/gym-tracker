@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+  <title>Gym Tracker</title>
+  <style>
+    :root{
+      --bg:#eef3fb;
+      --card:#ffffff;
+      --card2:#f4f7fd;
+      --border:#d1ddef;
+      --accent:#1d6fe8;
+      --accent-lt:#e8f0fd;
+      --text:#1a2234;
+      --muted:#6b7a99;
+      --green:#15a34a;
+      --red:#dc2626;
+      --orange:#d97706;
+      --radius:14px;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+    body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:16px;padding-bottom:48px}
+
+    /* HEADER */
+    .hdr{background:#fff;border-bottom:1px solid var(--border);padding:10px 14px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:50;box-shadow:0 1px 6px rgba(0,0,0,.06)}
+    .hdr-title{font-size:20px;font-weight:900;color:var(--accent);letter-spacing:-.5px;flex-shrink:0}
+    .date-inp{flex:1;background:var(--card2);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:7px 10px;font-size:14px;font-family:inherit;color-scheme:light;min-width:0}
+    .date-inp:focus{outline:none;border-color:var(--accent)}
+    .sync-badge{font-size:11px;font-weight:700;padding:5px 9px;border-radius:7px;white-space:nowrap;flex-shrink:0}
+    .sync-badge.ok   {background:#e6f9ed;color:var(--green)}
+    .sync-badge.busy {background:#fef3c7;color:var(--orange)}
+    .sync-badge.err  {background:#fee2e2;color:var(--red)}
+    .sync-badge.local{background:var(--accent-lt);color:var(--accent)}
+    .gear-btn{background:none;border:1px solid var(--border);color:var(--muted);border-radius:9px;padding:6px 9px;font-size:15px;cursor:pointer;flex-shrink:0}
+
+    /* SEARCH BAR */
+    .search-wrap{padding:12px 14px 2px}
+    .search-inp{width:100%;background:#fff;border:1.5px solid var(--border);color:var(--text);border-radius:12px;padding:12px 16px 12px 42px;font-size:16px;font-family:inherit;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+    .search-inp:focus{outline:none;border-color:var(--accent)}
+    .search-inp::placeholder{color:#b0bbd4}
+    .search-wrap{position:relative}
+    .search-icon{position:absolute;left:28px;top:50%;transform:translateY(-55%);color:var(--muted);font-size:17px;pointer-events:none}
+
+    /* SEARCH RESULTS */
+    #search-results{padding:0 14px 10px;display:none}
+    #search-results.show{display:block}
+    .search-result-item{background:#fff;border:1px solid var(--border);border-radius:11px;margin-top:8px;overflow:hidden}
+    .search-result-hdr{padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:pointer}
+    .search-result-hdr:active{background:var(--card2)}
+    .search-result-group{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.5px;background:var(--accent-lt);border-radius:6px;padding:2px 7px;flex-shrink:0}
+    .search-result-name{font-size:15px;font-weight:600;color:var(--text);flex:1}
+    .search-result-alias{font-size:13px;color:var(--muted);font-style:italic}
+    .search-no-result{padding:20px;text-align:center;color:var(--muted);font-size:14px}
+
+    /* PAGE */
+    .page{padding:12px 14px}
+
+    /* TODAY SECTION */
+    .today-box{background:#fff;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:14px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+    .today-hdr{padding:12px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+    .today-hdr-left{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px}
+    .today-date-pill{font-size:12px;font-weight:800;color:var(--accent);background:var(--accent-lt);border-radius:7px;padding:3px 10px}
+    .today-empty{padding:16px;color:var(--muted);font-size:14px;text-align:center}
+    .today-entry{padding:11px 16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start}
+    .today-entry-name{font-weight:700;font-size:14px;color:var(--text)}
+    .today-entry-sets{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.6}
+    .today-entry-right{display:flex;align-items:center;gap:8px;flex-shrink:0;margin-left:10px}
+    .entry-time{font-size:11px;color:var(--muted)}
+    .del-btn{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:0 2px;line-height:1}
+    .del-btn:active{color:var(--red)}
+
+    /* ACCORDION GROUPS */
+    .group{background:#fff;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+    .group-hdr{padding:15px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+    .group-hdr:active{background:var(--card2)}
+    .group-hdr-left{display:flex;align-items:center;gap:10px}
+    .group-label{font-size:16px;font-weight:700;color:var(--text)}
+    .group-count{font-size:11px;font-weight:800;color:#fff;background:var(--accent);border-radius:10px;padding:2px 8px;min-width:22px;text-align:center;display:none}
+    .group-count.show{display:inline-block}
+    .group-arrow{font-size:11px;color:var(--muted);transition:transform .2s;font-style:normal}
+    .group-body{display:none;border-top:1px solid var(--border)}
+    .group-body.open{display:block}
+
+    /* EXERCISE LIST */
+    .ex-list-item{border-top:1px solid var(--border)}
+    .ex-list-item:first-child{border-top:none}
+
+    .ex-row{padding:13px 16px;display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+    .ex-row:active{background:var(--card2)}
+
+    .ex-num{font-size:13px;font-weight:800;color:var(--accent);min-width:24px;flex-shrink:0;text-align:right}
+
+    .ex-name-block{flex:1;min-width:0}
+    .ex-name-line{display:flex;align-items:baseline;flex-wrap:wrap;gap:3px}
+    .ex-name{font-size:15px;font-weight:600;color:var(--text)}
+    .alias-wrap{display:inline-flex;align-items:baseline;color:var(--muted);font-size:14px;white-space:nowrap}
+    .alias-inp{border:none;background:transparent;color:var(--muted);font-size:14px;font-family:inherit;font-style:italic;width:90px;padding:0;outline:none}
+    .alias-inp:focus{color:var(--accent);border-bottom:1px solid var(--accent)}
+    .alias-inp::placeholder{color:#c0ccdf}
+
+    .ex-row-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
+    .ex-logged-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0}
+    .ex-arrow{font-size:11px;color:var(--muted);transition:transform .2s;font-style:normal}
+    .ex-arrow.open{transform:rotate(90deg)}
+
+    /* EXERCISE DETAIL */
+    .ex-detail{display:none;background:var(--card2);padding:12px 14px 14px;border-top:1px solid var(--border)}
+    .ex-detail.open{display:block}
+
+    /* GIF + SETS side by side — 50 / 50 */
+    .ex-main-row{display:flex;gap:10px;align-items:flex-start}
+    .ex-gif-col{flex:1;min-width:0;position:relative}
+    .ex-sets-full{flex:1}
+    .ex-gif-img{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:12px;display:block;position:relative;z-index:1}
+    .ex-gif-none{width:100%;aspect-ratio:1/1;border-radius:12px;background:#fff;border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;text-align:center;padding:8px;position:absolute;top:0;left:0}
+    .ex-sets-col{flex:1;min-width:0}
+
+    /* SETS */
+    .sets-hdr{display:grid;grid-template-columns:22px 1fr 14px 1fr;gap:5px;margin-bottom:5px}
+    .sets-hdr span{font-size:9px;font-weight:700;color:var(--muted);text-align:center;text-transform:uppercase;letter-spacing:.3px}
+    .set-row{display:grid;grid-template-columns:22px 1fr 14px 1fr;gap:5px;align-items:center;margin-bottom:6px}
+    .set-num{font-size:11px;font-weight:800;color:var(--muted);text-align:center}
+    .set-inp{background:#fff;border:1.5px solid var(--border);color:var(--text);border-radius:9px;padding:10px 2px;font-size:17px;font-weight:700;text-align:center;width:100%;-webkit-appearance:none;font-family:inherit}
+    .set-inp:focus{outline:none;border-color:var(--accent)}
+    .set-inp::placeholder{color:var(--border);font-size:12px;font-weight:400}
+    .set-sep{text-align:center;color:var(--muted);font-size:12px;font-weight:600}
+
+    /* CARDIO */
+    .cardio-wrap{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}
+    .inp-grp label{display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+    .inp-grp input,.inp-grp select{width:100%;background:#fff;border:1.5px solid var(--border);color:var(--text);border-radius:10px;padding:12px 10px;font-size:17px;font-weight:700;font-family:inherit;-webkit-appearance:none}
+    .inp-grp select option{background:#fff}
+    .inp-grp input:focus,.inp-grp select:focus{outline:none;border-color:var(--accent)}
+
+    /* FORM + NOTES */
+    .form-toggle{margin:12px 0 0;background:#fff;border:1.5px solid var(--border);color:var(--muted);border-radius:10px;padding:10px 13px;font-size:13px;cursor:pointer;font-family:inherit;width:100%;text-align:left;display:flex;align-items:center;gap:7px}
+    .form-toggle.has-data{border-color:var(--accent);color:var(--accent)}
+    .ftarr{transition:transform .2s;font-style:normal;font-size:11px}
+    .form-toggle.open .ftarr{transform:rotate(90deg)}
+    .form-body{display:none;margin-top:12px}
+    .form-body.open{display:block}
+    .notes-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+    .notes-ta{width:100%;background:#fff;border:1.5px solid var(--border);color:var(--text);border-radius:10px;padding:11px;font-size:14px;line-height:1.6;resize:vertical;font-family:inherit;min-height:72px}
+    .notes-ta:focus{outline:none;border-color:var(--accent)}
+    .notes-count{font-size:10px;color:var(--muted);text-align:right;margin-top:3px}
+
+    /* LOG BUTTON */
+    .log-btn{display:block;width:100%;margin-top:14px;background:var(--accent);color:#fff;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;transition:opacity .1s,background .15s}
+    .log-btn:active{opacity:.85}
+    .log-btn.done{background:var(--green)}
+
+    /* ADD EXERCISE */
+    .add-ex-btn{width:calc(100% - 32px);margin:10px 16px 14px;background:none;border:1.5px dashed var(--border);color:var(--muted);border-radius:11px;padding:12px;font-size:14px;cursor:pointer;font-family:inherit;text-align:center}
+    .add-ex-btn:active{background:var(--card2)}
+
+    /* HISTORY */
+    .history-toggle-btn{width:100%;background:#fff;border:1.5px solid var(--border);color:var(--muted);border-radius:var(--radius);padding:13px;font-size:14px;cursor:pointer;font-family:inherit;margin-top:14px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
+    .history-day{background:#fff;border:1px solid var(--border);border-radius:11px;margin-bottom:10px;overflow:hidden}
+    .history-day-hdr{background:var(--card2);padding:11px 14px;font-weight:700;font-size:13px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border)}
+    .history-day-count{font-size:11px;color:var(--muted);font-weight:400}
+    .history-entry{padding:9px 14px;border-top:1px solid var(--border)}
+    .history-entry-name{font-weight:600;font-size:13px}
+    .history-entry-sets{font-size:11px;color:var(--muted);margin-top:2px}
+    .export-btn{width:100%;background:#fff;border:1.5px solid var(--accent);color:var(--accent);border-radius:11px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:4px}
+
+    /* SETTINGS MODAL */
+    .modal-ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;overflow-y:auto;padding:20px 12px}
+    .modal-ov.open{display:block}
+    .modal{background:#fff;border-radius:16px;padding:22px;max-width:500px;margin:0 auto;box-shadow:0 8px 40px rgba(0,0,0,.18)}
+    .modal-title{font-size:18px;font-weight:800;margin-bottom:4px;color:var(--text)}
+    .modal-sub{font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5}
+    .fld-lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:14px 0 5px}
+    .fld-inp{width:100%;background:var(--card2);border:1.5px solid var(--border);color:var(--text);border-radius:10px;padding:12px;font-size:15px;font-family:inherit}
+    .fld-inp:focus{outline:none;border-color:var(--accent)}
+    .fld-hint{font-size:11px;color:var(--muted);margin-top:5px;line-height:1.5}
+    .fld-hint a{color:var(--accent)}
+    .info-box{background:var(--accent-lt);border:1px solid #c3d6f9;border-radius:10px;padding:12px;margin-bottom:4px;font-size:12px;line-height:1.65}
+    .info-box strong{color:var(--accent)}
+    .m-btn{width:100%;margin-top:10px;border:none;border-radius:11px;padding:14px;font-size:15px;font-weight:800;cursor:pointer;font-family:inherit}
+    .m-btn.primary{background:var(--accent);color:#fff;margin-top:18px}
+    .m-btn.danger{background:none;border:1.5px solid var(--red);color:var(--red)}
+    .m-btn.secondary{background:none;border:1.5px solid var(--border);color:var(--muted)}
+    .m-divider{border:none;border-top:1px solid var(--border);margin:18px 0}
+
+    /* TOAST */
+    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--green);color:#fff;padding:11px 24px;border-radius:20px;font-weight:800;font-size:14px;z-index:999;transition:transform .3s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.2)}
+    #toast.show{transform:translateX(-50%) translateY(0)}
+    #toast.err{background:var(--red)}
+  </style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-title">GYM</div>
+  <input type="date" id="dateInp" class="date-inp" oninput="onDateChange(this.value)"/>
+  <div class="sync-badge local" id="syncBadge">Local</div>
+  <button class="gear-btn" onclick="openSettings()">⚙️</button>
+</header>
+
+<!-- SEARCH -->
+<div class="search-wrap">
+  <span class="search-icon">🔍</span>
+  <input class="search-inp" type="search" id="searchInp" placeholder="Search exercises…" oninput="onSearch(this.value)" autocomplete="off"/>
+</div>
+<div id="search-results"></div>
+
+<!-- MAIN PAGE -->
+<div class="page" id="page"></div>
+<div id="toast"></div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-ov" id="settingsModal">
+  <div class="modal">
+    <div class="modal-title">GitHub Sync</div>
+    <div class="modal-sub">Store your data in a private GitHub repo — accessible from any device.</div>
+    <div class="info-box">
+      <strong>One-time setup:</strong><br>
+      1. Create a <strong>private repo</strong> on GitHub (e.g. <code>gym-data</code>)<br>
+      2. GitHub → Settings → Developer Settings → Tokens → <strong>Fine-grained</strong><br>
+      3. Set repo: only <code>gym-data</code> · Permission: <strong>Contents → Read &amp; Write</strong><br>
+      4. Paste the token below
+    </div>
+    <div class="fld-lbl">GitHub Username</div>
+    <input class="fld-inp" id="ghUser" type="text" placeholder="yourusername" autocomplete="off"/>
+    <div class="fld-lbl">Repo Name</div>
+    <input class="fld-inp" id="ghRepo" type="text" placeholder="gym-data" autocomplete="off"/>
+    <div class="fld-lbl">Personal Access Token</div>
+    <input class="fld-inp" id="ghToken" type="password" placeholder="github_pat_…" autocomplete="off"/>
+    <div class="fld-hint"><a href="https://github.com/settings/tokens?type=beta" target="_blank">Create a fine-grained token →</a></div>
+    <button class="m-btn primary" onclick="saveGHSettings()">Connect &amp; Sync</button>
+    <button class="m-btn danger"  onclick="clearGHSettings()">Disconnect GitHub</button>
+    <hr class="m-divider"/>
+    <button class="export-btn" onclick="exportJSON()">Export All Data as JSON</button>
+    <button class="m-btn secondary" onclick="closeSettings()">Close</button>
+  </div>
+</div>
+
+<script>
+// ── DATASET ──────────────────────────────────────────────
+
+const GIF_BASE = 'gifs/';
+
+const EXDATA = {
+  'Barbell Bench Press':       {gif:'0025-EIeI8Vf.gif',note:'Lie flat on a bench, feet flat on ground. Grip barbell slightly wider than shoulder-width. Lower bar slowly to chest keeping elbows at ~45°. Press up explosively. Keep wrists straight, shoulder blades retracted.'},
+  'Incline Dumbbell Press':    {gif:'0314-ns0SIbU.gif',note:'Set bench to 30–45°. Hold dumbbells at shoulder level, palms forward. Lower slowly to upper chest, elbows at 45°. Press up. Targets upper chest. Keep lower back flat on bench.'},
+  'Decline Bench Press':       {gif:'0033-GrO65fd.gif',note:'Feet secured on decline bench, head lower than hips. Lower bar to lower chest, elbows tucked. Targets lower chest. Spotter recommended.'},
+  'Cable Fly':                 {gif:'0154-aqvSOQE.gif',note:'Set cables at chest height. Stand in split stance. Arms slightly bent, squeeze chest at center. Control the return. Keep a slight arc — don\'t let elbows drop below shoulder level.'},
+  'Pec Deck':                  {gif:'pec-deck.jpeg',   note:'Sit upright with your back flat against the pad and bring the handles together in front of your chest while maintaining a slight bend in your elbows.'},
+  'Push-Up':                   {gif:'0662-I4hDWkc.gif',note:'Hands slightly wider than shoulder-width, body straight from head to heels. Lower chest to ground, elbows at ~45°. Push through palms. Engage core — don\'t let hips sag.'},
+  'Dumbbell Bench Press':      {gif:'0289-SpYC0Kp.gif',note:'Lie flat on bench, dumbbells at chest level, palms forward. Press up until arms extended. Lower slowly to chest level. Full range of motion each rep.'},
+  'Dumbbell Pullover':         {gif:'dumbbell-pullover.jpeg', note:'Lie across or flat on a bench with a slight bend in your elbows, lowering the dumbbell behind your head until you feel a deep stretch in your lats and chest before pulling it back over your chest.'},
+  'Chest Dips':                {gif:'0251-9WTm7dq.gif',note:'Lean forward ~30° to target chest (upright = triceps). Lower until chest-level, elbows flared slightly out. Push back up.'},
+  'Lat Pulldown':              {gif:'0150-eYnzaCm.gif',note:'Sit with knees under pads, slight arch in lower back, chest up. Pull bar to upper chest squeezing lats — don\'t pull to chin. Lead with elbows. Control the return slowly.'},
+  'Seated Cable Row':          {gif:'0180-hvV79Si.gif',note:'Feet flat on rests, knees slightly bent, back straight. Pull handles to lower sternum squeezing shoulder blades. Pause 1 sec. Control return — don\'t let torso swing.'},
+  'Bent Over Barbell Row':     {gif:'0027-eZyBC3j.gif',note:'Hinge at hips ~45°, knees slightly bent, back flat. Pull bar to lower chest/navel squeezing shoulder blades. Control descent. Brace core hard — back must stay flat.'},
+  'Deadlift':                  {gif:'0032-ila4NZS.gif',note:'Bar over mid-foot. Big breath and brace, chest up. Drive floor away. Lock out hips at top. Bar stays close to body. Never round lower back.'},
+  'T-Bar Row':                 {gif:'1349-BgljGjd.gif',note:'Chest on pad, grip handles. Pull towards chest squeezing shoulder blades. Full stretch at bottom. The chest support removes lower back stress.'},
+  'Pull-Up':                   {gif:'0652-lBDjFxJ.gif',note:'Overhand grip, slightly wider than shoulders. Pull until chin clears bar, squeezing lats. Full dead hang at bottom. Don\'t kip — slow and controlled.'},
+  'Face Pull':                 {gif:'face-pull.jpeg',  note:'Set the rope attachment to upper-chest or eye height and pull the handles toward your forehead while driving your elbows high and outward.'},
+  'Single Arm Dumbbell Row':   {gif:'0292-C0MA9bC.gif',note:'One knee and hand on bench. Pull dumbbell to hip, elbow close to body. Full stretch at bottom. Don\'t rotate torso — stay square. Squeeze lat at top.'},
+  'Straight Arm Pulldown':     {gif:'straight-arm-pulldown.jpeg', note:'Hinge slightly at the hips with your core braced and sweep the bar down to your thighs while keeping your arms straight.'},
+  'Barbell Overhead Press':    {gif:'0091-kTbSH9h.gif',note:'Bar at shoulder level, grip just outside shoulders. Press overhead until arms locked. Brace core. Don\'t flare elbows too wide.'},
+  'Dumbbell Shoulder Press':   {gif:'0361-84RyJf8.gif',note:'Seated or standing, dumbbells at shoulder level, palms forward. Press up until arms extended. Control descent to shoulder level.'},
+  'Lateral Raise':             {gif:'0977-sTg7iys.gif',note:'Slight forward lean, arms slightly bent. Raise arms to shoulder height — no higher. Lead with elbows, not hands. Pinky slightly higher than thumb at top. Slow controlled descent — don\'t swing.'},
+  'Front Raise':               {gif:'0978-TFA88iB.gif',note:'Hold barbell or dumbbells at thighs. Raise to shoulder height with straight arms. Control descent. Keep torso still. Hits anterior deltoid.'},
+  'Rear Delt Fly':             {gif:'2292-mu5Guxt.gif',note:'Hinge forward ~90°. Arms slightly bent, raise out to sides until parallel to floor. Squeeze rear delts at top. Keep torso still. Light weight — these muscles are small.'},
+  'Arnold Press':              {gif:'2137-Xy4jlWA.gif',note:'Start with palms facing you at shoulder level. As you press up, rotate so palms face forward at top. Reverse on the way down. Hits all three deltoid heads.'},
+  'Upright Row':               {gif:'0120-UDlhcO8.gif',note:'Narrow overhand grip. Pull bar up close to body, elbows flare out and high. Bar reaches chin level. Control descent. Note: can cause shoulder impingement — use wider grip if pain.'},
+  'Cable Lateral Raise':       {gif:'cable-lateral-raise.jpeg', note:'Stand sideways to a low pulley and raise your arm out to the side until it is parallel with the floor, avoiding shrugging your traps.'},
+  'Barbell Curl':              {gif:'0031-25GPyDY.gif',note:'Shoulder-width underhand grip. Elbows pinned to sides. Curl to shoulders squeezing biceps. Fully extend at bottom. Don\'t swing or use back momentum.'},
+  'Dumbbell Curl':             {gif:'0294-NbVPDMW.gif',note:'Palms up, curl to shoulders. Supinate (rotate) wrist at top for peak contraction. Full extension at bottom. Elbows stay stationary.'},
+  'Hammer Curl':               {gif:'0165-HPlPoQA.gif',note:'Neutral grip (thumbs up). Curl across body or straight up. Hits brachialis and brachioradialis. Great for forearm thickness and overall arm size.'},
+  'Preacher Curl':             {gif:'0059-SYJ4Bkt.gif',note:'Upper arms flat on pad. Full extension at bottom — feel the stretch. Curl to shoulder. Eliminates cheating — strict form required. Great for peak bicep isolation.'},
+  'Cable Curl':                {gif:'cable-curl.jpeg', note:'Keep your elbows pinned tightly to your sides and curl the handle upward against constant cable tension without swinging your torso.'},
+  'Concentration Curl':        {gif:'0976-kmVVAfu.gif',note:'Seated, elbow braced on inner thigh. Curl dumbbell to shoulder. Pure isolation. Great finisher for peak contraction. Fully extend at bottom.'},
+  'Incline Dumbbell Curl':     {gif:'0315-F3xgbjF.gif',note:'Lie back on incline bench (45–60°), arms hang straight. Curl up. Deeper stretch at the bottom than standing curls — great for long head of bicep.'},
+  'Tricep Pushdown':           {gif:'0241-gAwDzB3.gif',note:'Cable high, v-bar or rope. Elbows pinned to sides. Push down until arms straight, squeeze triceps. Control up. Only forearms move.'},
+  'Rope Pushdown':             {gif:'rope-pushdown.jpeg', note:'Lock your upper arms at your sides and extend your elbows downward, flaring the ends of the rope apart at the bottom for peak tricep contraction.'},
+  'Overhead Tricep Extension': {gif:'1722-1xHyxys.gif',note:'Cable rope behind head, elbows pointing forward. Extend arms overhead. Keep upper arms stationary and close to head. Hits long head of tricep which is often undertrained.'},
+  'Skull Crushers':            {gif:'0060-h8LFzo9.gif',note:'Lie flat, barbell or EZ bar above chest. Lower bar to forehead by bending elbows — don\'t move upper arms. Press back up. Keep elbows pointing up at ceiling.'},
+  'Tricep Dips':               {gif:null,              note:'Upright torso to target triceps (lean forward = chest). Lower until upper arms parallel to floor. Press back. Keep elbows from flaring wide.'},
+  'Close Grip Bench Press':    {gif:'0030-J6Dx1Mu.gif',note:'Shoulder-width grip on barbell. Lower to lower chest, elbows tucked. Press up. Closer grip than bench press shifts emphasis to triceps.'},
+  'Tricep Kickback':           {gif:'1728-vvNjDJS.gif',note:'Hinge forward ~45°, upper arm parallel to floor. Extend arm back until straight, squeeze tricep. Return controlled. Upper arm stays still — only forearm moves.'},
+  'Barbell Squat':             {gif:'0024-Y7YcmIJ.gif',note:'Bar across upper traps. Feet shoulder-width, toes slightly out. Brace core. Sit back and down, knees track over toes. Thighs parallel or below. Drive up through heels. Chest tall — don\'t round.'},
+  'Leg Press':                 {gif:'2287-V07qpXy.gif',note:'Feet shoulder-width on platform. Lower until knees at 90°, don\'t let knees cave in. Press through heels. Don\'t lock knees at top. High feet = glutes/hams, low feet = quads.'},
+  'Leg Extension':             {gif:'leg-extension.jpeg', note:'Align your knees with the machine\'s pivot point, brace against the handles, and extend your lower legs smoothly until your quads are fully contracted.'},
+  'Leg Curl':                  {gif:'3235-zHEpuuc.gif',note:'Lying or seated. Curl heels to glutes, squeeze hamstrings at top. Full extension. Slow controlled. Keep hips pressed into pad — don\'t lift them.'},
+  'Romanian Deadlift':         {gif:'0085-wQ2c4XD.gif',note:'Hinge at hips, back flat, knees slightly bent. Lower bar along legs feeling hamstring stretch. Drive hips forward to stand. Feel the stretch — go until back is about to round.'},
+  'Walking Lunges':            {gif:'1460-IZVHb27.gif',note:'Step forward, lower back knee to just above floor. Front thigh parallel. Push off front foot, bring back foot forward. Keep torso upright.'},
+  'Standing Calf Raise':       {gif:'1372-8ozhUIZ.gif',note:'Full range of motion — full stretch at bottom, full rise at top. Hold top for 1 sec. Slow descent. Calves respond best to high reps (15–20+).'},
+  'Hip Thrust':                {gif:'hip-thrust.jpeg', note:'Rest your upper back against a bench with shins vertical at the top of the rep, driving through your heels to extend your hips fully.'},
+  'Goblet Squat':              {gif:'goblet-squat.jpeg', note:'Hold a dumbbell or kettlebell tight against your chest, sit down between your knees with an upright torso, and drive back up through mid-foot.'},
+  'Sumo Deadlift':             {gif:'0117-KgI0tqW.gif',note:'Wide stance, toes pointed out. Grip inside knees. Drive knees out as you pull. Shifts emphasis to inner thighs and glutes. Keep back flat.'},
+  'Crunches':                  {gif:'0635-QUDd8WS.gif',note:'Hands behind head, knees bent. Curl shoulders up — don\'t sit all the way up. Exhale on way up. Keep lower back on floor. The movement is small. Don\'t pull on neck.'},
+  'Plank':                     {gif:'2135-VBAWRPG.gif',note:'Forearms or hands, body perfectly straight. Squeeze abs, glutes, quads. Don\'t let hips sag or rise. Breathe normally. Quality over duration.'},
+  'Leg Raise':                 {gif:'0620-WhuFnR7.gif',note:'Lying flat on bench, legs straight. Raise to 90° keeping legs together. Lower slowly without touching floor. Keep lower back pressed down — don\'t arch. Hits lower abs.'},
+  'Cable Crunch':              {gif:'0175-WW95auq.gif',note:'Kneel at cable machine, rope behind head. Crunch down — hips stay still, only torso moves. Exhale hard at bottom. Great for weighted ab training.'},
+  'Russian Twist':             {gif:'russian-twist.jpeg', note:'Lean back slightly with a neutral spine and rotate your ribcage from side to side rather than just swinging your arms.'},
+  'Hanging Knee Raise':        {gif:'0011-03lzqwk.gif',note:'Hang from bar. Raise knees to chest squeezing abs. Control descent. Don\'t swing. Progress to straight leg raises when ready.'},
+  'Ab Wheel Rollout':          {gif:'ab-wheel-rollout.jpeg', note:'Tuck your pelvis under and brace your core tightly as you roll forward, stopping before your lower back begins to sag.'},
+  'Bicycle Crunch':            {gif:'0972-tZkGYZ9.gif',note:'Hands behind head. Bring opposite elbow to opposite knee in cycling motion. Extend other leg. Slow and controlled — feel oblique contraction each rep.'},
+  'Treadmill':                 {gif:null,note:'Stand tall with a slight forward lean from the ankles — not from the waist. Look ahead, keep shoulders relaxed and arms swinging forward-back (not across body). Land with foot under your hip, not in front — overstriding causes heavy heel striking. Set 1% incline to simulate outdoor effort. Warm up 5 min walking, cool down 5 min. Never grip the side rails — it shifts weight off your legs and throws off your natural stride.'},
+  'Stationary Cycling':        {gif:null,note:'Seat height: knee should have a 5–10° bend at the bottom of the pedal stroke. Hold handlebars lightly — no white-knuckling. Push down AND pull up for a smooth circular stroke rather than just stomping. Steady-state target: 70–80 RPM at moderate resistance. HIIT sprint: 90–110 RPM with low resistance. Strength climb: 50–60 RPM at high resistance. Avoid bobbing in the saddle — if you bounce, drop the resistance.'},
+  'Elliptical Cross Trainer':  {gif:null,note:'Stand tall — head up, shoulders back and down, chest open. Engage your core throughout; don\'t lean on the handles or hunch over the console. Keep feet flat on the pedals and drive through your heels to activate glutes and hamstrings. Use the moving handles actively — push and pull with control, don\'t let them drag you. Avoid bouncing. Try pedaling backward occasionally to shift emphasis to hamstrings and glutes.'},
+  'Lower Body Warmup':         {gif:null,note:''},
+  'Upper Body Warmup':         {gif:null,note:''},
+  'HIIT':                      {gif:null,note:''},
+};
+
+// ── LIBRARY ──────────────────────────────────────────────
+
+const GROUPS = [
+  {id:'chest',    label:'Chest'},
+  {id:'back',     label:'Back'},
+  {id:'shoulders',label:'Shoulders'},
+  {id:'biceps',   label:'Biceps'},
+  {id:'triceps',  label:'Triceps'},
+  {id:'legs',     label:'Legs'},
+  {id:'abs',      label:'Abs'},
+  {id:'cardio',   label:'Cardio / HIIT / Warmup'},
+];
+
+const LIBRARY = {
+  chest:    [{id:'bench-press',name:'Barbell Bench Press'},{id:'incline-db-press',name:'Incline Dumbbell Press'},{id:'decline-bench',name:'Decline Bench Press'},{id:'cable-fly',name:'Cable Fly'},{id:'pec-deck',name:'Pec Deck'},{id:'push-up',name:'Push-Up'},{id:'db-pullover',name:'Dumbbell Pullover'},{id:'chest-dips',name:'Chest Dips'}],
+  back:     [{id:'lat-pulldown',name:'Lat Pulldown'},{id:'cable-row',name:'Seated Cable Row'},{id:'bent-row',name:'Bent Over Barbell Row'},{id:'deadlift',name:'Deadlift'},{id:'tbar-row',name:'T-Bar Row'},{id:'pull-up',name:'Pull-Up'},{id:'face-pull',name:'Face Pull'},{id:'sa-row',name:'Single Arm Dumbbell Row'},{id:'str-arm-pull',name:'Straight Arm Pulldown'}],
+  shoulders:[{id:'bb-ohp',name:'Barbell Overhead Press'},{id:'db-shoulder-press',name:'Dumbbell Shoulder Press'},{id:'lateral-raise',name:'Lateral Raise'},{id:'front-raise',name:'Front Raise'},{id:'rear-delt-fly',name:'Rear Delt Fly'},{id:'arnold-press',name:'Arnold Press'},{id:'upright-row',name:'Upright Row'},{id:'cable-lateral-raise',name:'Cable Lateral Raise'}],
+  biceps:   [{id:'bb-curl',name:'Barbell Curl'},{id:'db-curl',name:'Dumbbell Curl'},{id:'hammer-curl',name:'Hammer Curl'},{id:'preacher-curl',name:'Preacher Curl'},{id:'cable-curl',name:'Cable Curl'},{id:'conc-curl',name:'Concentration Curl'},{id:'incline-db-curl',name:'Incline Dumbbell Curl'}],
+  triceps:  [{id:'tri-pushdown',name:'Tricep Pushdown'},{id:'rope-pushdown',name:'Rope Pushdown'},{id:'oh-tri-ext',name:'Overhead Tricep Extension'},{id:'skull-crusher',name:'Skull Crushers'},{id:'tri-dips',name:'Tricep Dips'},{id:'cg-bench',name:'Close Grip Bench Press'},{id:'tri-kickback',name:'Tricep Kickback'}],
+  legs:     [{id:'bb-squat',name:'Barbell Squat'},{id:'leg-press',name:'Leg Press'},{id:'leg-ext',name:'Leg Extension'},{id:'leg-curl',name:'Leg Curl'},{id:'rdl',name:'Romanian Deadlift'},{id:'lunges',name:'Walking Lunges'},{id:'calf-raise',name:'Standing Calf Raise'},{id:'hip-thrust',name:'Hip Thrust'},{id:'goblet-squat',name:'Goblet Squat'},{id:'sumo-dl',name:'Sumo Deadlift'}],
+  abs:      [{id:'crunches',name:'Crunches'},{id:'plank',name:'Plank'},{id:'leg-raise',name:'Leg Raise'},{id:'cable-crunch',name:'Cable Crunch'},{id:'russian-twist',name:'Russian Twist'},{id:'hanging-knee',name:'Hanging Knee Raise'},{id:'ab-wheel',name:'Ab Wheel Rollout'},{id:'bicycle-crunch',name:'Bicycle Crunch'},{id:'mountain-climbers',name:'Mountain Climbers'}],
+  cardio:   [{id:'treadmill',name:'Treadmill',isCardio:true},{id:'cycling',name:'Stationary Cycling',isCardio:true},{id:'elliptical',name:'Elliptical Cross Trainer',isCardio:true},{id:'lb-warmup',name:'Lower Body Warmup',isCardio:true},{id:'ub-warmup',name:'Upper Body Warmup',isCardio:true},{id:'hiit',name:'HIIT',isCardio:true}],
+};
+
+const MAX_NOTES = 3000;
+const GH_FILE   = 'gym-data.json';
+
+// ── STATE ────────────────────────────────────────────────
+
+let currentDate   = todayKey();
+let ghSha         = null;
+let openGroups    = new Set();
+let openExercises = new Set();
+let searchQuery   = '';
+
+// ── HELPERS ──────────────────────────────────────────────
+
+function todayKey(){return new Date().toISOString().slice(0,10)}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function formatDateShort(k){if(k===todayKey())return 'Today';const[y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})}
+function formatDate(k){const[y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d).toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric',year:'numeric'})}
+function formatTime(ts){return new Date(ts).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}
+
+function groupLabel(gid){return(GROUPS.find(g=>g.id===gid)||{}).label||gid}
+
+// ── LOCAL DB ─────────────────────────────────────────────
+
+function loadDB(){try{return JSON.parse(localStorage.getItem('gymTracker')||'{}')}catch{return{}}}
+function saveDB(d){localStorage.setItem('gymTracker',JSON.stringify(d))}
+function getDB(){const d=loadDB();if(!d.custom)d.custom={};if(!d.logs)d.logs={};if(!d.userExercises)d.userExercises={};return d}
+function getCustom(id){return getDB().custom[id]||{}}
+function setCustomField(id,field,value){const d=getDB();if(!d.custom[id])d.custom[id]={};d.custom[id][field]=value;saveDB(d)}
+function getLogsForDate(date){return getDB().logs[date]||[]}
+function addLogEntry(date,entry){const d=getDB();if(!d.logs[date])d.logs[date]=[];d.logs[date].push(entry);saveDB(d)}
+function deleteLogEntry(date,index){const d=getDB();if(d.logs[date]){d.logs[date].splice(index,1);saveDB(d)}}
+function getExercises(gid){const d=getDB();return[...(LIBRARY[gid]||[]).map(e=>({...e})),...(d.userExercises[gid]||[]).map(e=>({...e,isUser:true}))]}
+
+function getAllExercises(){
+  const d=getDB();
+  const all=[];
+  GROUPS.forEach(g=>{
+    const exs=[...(LIBRARY[g.id]||[]).map(e=>({...e,gid:g.id})),...(d.userExercises[g.id]||[]).map(e=>({...e,gid:g.id,isUser:true}))];
+    all.push(...exs);
+  });
+  return all;
+}
+
+function getNote(exId,exName){
+  const c=getCustom(exId);
+  if(c.notes!==undefined)return c.notes;
+  return EXDATA[exName]?.note||'';
+}
+
+function isLoggedToday(exId){
+  return getLogsForDate(currentDate).some(e=>e.exerciseId===exId);
+}
+
+// ── GITHUB ───────────────────────────────────────────────
+
+function getGHConfig(){try{return JSON.parse(localStorage.getItem('gymGH')||'null')}catch{return null}}
+function setGHConfig(cfg){localStorage.setItem('gymGH',JSON.stringify(cfg))}
+function clearGHConfig(){localStorage.removeItem('gymGH');ghSha=null}
+
+function setSyncBadge(state){
+  const el=document.getElementById('syncBadge');if(!el)return;
+  const map={ok:['✓ Synced','ok'],busy:['Syncing…','busy'],err:['Sync error','err'],local:['Local','local']};
+  const[text,cls]=map[state]||map.local;
+  el.textContent=text;el.className='sync-badge '+cls;
+}
+
+async function ghLoad(){
+  const cfg=getGHConfig();if(!cfg)return null;
+  setSyncBadge('busy');
+  try{
+    const res=await fetch(`https://api.github.com/repos/${cfg.username}/${cfg.repo}/contents/${GH_FILE}`,{headers:{Authorization:`token ${cfg.token}`,Accept:'application/vnd.github.v3+json'}});
+    if(res.status===404){setSyncBadge('ok');return null}
+    if(!res.ok)throw new Error(res.status);
+    const json=await res.json();
+    ghSha=json.sha;setSyncBadge('ok');
+    return JSON.parse(decodeURIComponent(escape(atob(json.content.replace(/\n/g,'')))));
+  }catch(e){console.error('GH load:',e);setSyncBadge('err');return null}
+}
+
+async function ghSave(){
+  const cfg=getGHConfig();if(!cfg)return;
+  setSyncBadge('busy');
+  const content=btoa(unescape(encodeURIComponent(JSON.stringify(getDB(),null,2))));
+  const body={message:'Gym log '+new Date().toISOString(),content};
+  if(ghSha)body.sha=ghSha;
+  try{
+    const res=await fetch(`https://api.github.com/repos/${cfg.username}/${cfg.repo}/contents/${GH_FILE}`,{method:'PUT',headers:{Authorization:`token ${cfg.token}`,'Content-Type':'application/json',Accept:'application/vnd.github.v3+json'},body:JSON.stringify(body)});
+    if(!res.ok)throw new Error(res.status);
+    const json=await res.json();
+    ghSha=json.content.sha;setSyncBadge('ok');
+  }catch(e){console.error('GH save:',e);setSyncBadge('err');showToast('Saved locally (GitHub sync failed)',true)}
+}
+
+// ── TOAST ────────────────────────────────────────────────
+
+function showToast(msg,isErr){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.className=isErr?'err show':'show';
+  setTimeout(()=>t.className='',2500);
+}
+
+// ── SEARCH ───────────────────────────────────────────────
+
+let searchTimer=null;
+
+function onSearch(val){
+  searchQuery=val.trim().toLowerCase();
+  clearTimeout(searchTimer);
+  searchTimer=setTimeout(()=>renderSearch(),150);
+}
+
+function renderSearch(){
+  const resultsEl=document.getElementById('search-results');
+  const pageEl=document.getElementById('page');
+  if(!searchQuery){
+    resultsEl.className='';resultsEl.innerHTML='';
+    pageEl.style.display='';
+    return;
+  }
+  pageEl.style.display='none';
+  resultsEl.className='show';
+
+  const all=getAllExercises();
+  const matches=all.filter(ex=>{
+    const alias=(getCustom(ex.id).alias||'').toLowerCase();
+    return ex.name.toLowerCase().includes(searchQuery)||alias.includes(searchQuery);
+  });
+
+  if(!matches.length){
+    resultsEl.innerHTML=`<div class="search-no-result">No exercises match "${esc(searchQuery)}"</div>`;
+    return;
+  }
+
+  resultsEl.innerHTML=matches.map(ex=>{
+    const alias=getCustom(ex.id).alias||'';
+    const logged=isLoggedToday(ex.id);
+    return`<div class="search-result-item">
+<div class="search-result-hdr" onclick="openExerciseFromSearch('${ex.id}','${ex.gid}')">
+  <span class="search-result-group">${groupLabel(ex.gid)}</span>
+  <span>
+    <span class="search-result-name">${highlightMatch(ex.name,searchQuery)}</span>
+    ${alias?`<span class="search-result-alias"> "${highlightMatch(alias,searchQuery)}"</span>`:''}
+  </span>
+  ${logged?'<span class="ex-logged-dot"></span>':''}
+</div>
+<div class="ex-detail" id="sr-det-${ex.id}"></div>
+</div>`;
+  }).join('');
+}
+
+function highlightMatch(str,q){
+  const idx=str.toLowerCase().indexOf(q);
+  if(idx<0)return esc(str);
+  return esc(str.slice(0,idx))+'<strong style="color:var(--accent)">'+esc(str.slice(idx,idx+q.length))+'</strong>'+esc(str.slice(idx+q.length));
+}
+
+function openExerciseFromSearch(exId,gid){
+  const detEl=document.getElementById('sr-det-'+exId);
+  if(!detEl)return;
+  if(detEl.classList.contains('open')){
+    detEl.classList.remove('open');detEl.innerHTML='';
+    return;
+  }
+  const exercises=getExercises(gid);
+  const ex=exercises.find(e=>e.id===exId)||{id:exId,name:'',gid,isCardio:gid==='cardio'};
+  detEl.innerHTML=renderExDetail(ex);
+  detEl.classList.add('open');
+}
+
+// ── RENDER ───────────────────────────────────────────────
+
+function renderPage(){
+  const page=document.getElementById('page');
+  page.innerHTML=renderToday()+GROUPS.map(g=>renderGroup(g)).join('')+renderHistorySection();
+}
+
+function renderToday(){
+  const logs=getLogsForDate(currentDate);
+  const label=formatDateShort(currentDate);
+  let entries='';
+  if(!logs.length){
+    entries=`<div class="today-empty">No exercises logged for ${label} yet.</div>`;
+  } else {
+    entries=logs.map((e,i)=>{
+      const sets=e.isCardio?`${e.duration||'—'} min · ${e.intensity||'—'}`
+        :e.sets.map((s,si)=>`S${si+1}: ${s.weight||0} lbs × ${s.reps||0}`).join(' · ');
+      return `<div class="today-entry">
+<div>
+<div class="today-entry-name">${esc(e.name)}${e.alias?` <span style="color:var(--accent);font-style:italic;font-size:13px;font-weight:400">"${esc(e.alias)}"</span>`:''}</div>
+<div class="today-entry-sets">${sets}</div>
+</div>
+<div class="today-entry-right">
+<span class="entry-time">${formatTime(e.ts)}</span>
+<button class="del-btn" onclick="deleteEntry(${i})">×</button>
+</div>
+</div>`;
+    }).join('');
+  }
+  return `<div class="today-box">
+<div class="today-hdr">
+<div class="today-hdr-left">Today's Log</div>
+<div class="today-date-pill">${label}</div>
+</div>
+<div id="today-entries">${entries}</div>
+</div>`;
+}
+
+function renderGroup(g){
+  const logs=getLogsForDate(currentDate);
+  const count=logs.filter(e=>getExercises(g.id).some(ex=>ex.id===e.exerciseId)).length;
+  const isOpen=openGroups.has(g.id);
+  return `<div class="group" id="grp-${g.id}">
+<div class="group-hdr" onclick="toggleGroup('${g.id}')">
+<div class="group-hdr-left">
+<div class="group-label">${g.label}</div>
+<div class="group-count${count?' show':''}" id="gcnt-${g.id}">${count}</div>
+</div>
+<i class="group-arrow" id="garr-${g.id}" style="${isOpen?'transform:rotate(90deg)':''}">▶</i>
+</div>
+<div class="group-body${isOpen?' open':''}" id="gbody-${g.id}">
+${isOpen?renderExerciseList(g.id):''}
+</div>
+</div>`;
+}
+
+function renderExerciseList(gid){
+  const exercises=getExercises(gid);
+  const rows=exercises.map((ex,idx)=>{
+    const isOpen=openExercises.has(ex.id);
+    const logged=isLoggedToday(ex.id);
+    const alias=getCustom(ex.id).alias||'';
+    return `<div class="ex-list-item" id="exitem-${ex.id}">
+<div class="ex-row" onclick="toggleExercise('${ex.id}','${gid}')">
+<span class="ex-num">${idx+1}.</span>
+<span class="ex-name-block">
+<span class="ex-name-line">
+<span class="ex-name">${esc(ex.name)}</span>
+<span class="alias-wrap" onclick="event.stopPropagation()">(<input
+class="alias-inp" type="text" maxlength="100" placeholder="alias:"
+value="${esc(alias)}"
+oninput="setCustomField('${ex.id}','alias',this.value)"
+/>)</span>
+</span>
+</span>
+<div class="ex-row-right">
+${logged?'<span class="ex-logged-dot"></span>':''}
+<i class="ex-arrow${isOpen?' open':''}" id="earr-${ex.id}">▶</i>
+</div>
+</div>
+<div class="ex-detail${isOpen?' open':''}" id="exdet-${ex.id}">
+${isOpen?renderExDetail(ex):''}
+</div>
+</div>`;
+  }).join('');
+  return rows+`<button class="add-ex-btn" onclick="addExercise('${gid}')">+ Add Exercise</button>`;
+}
+
+function renderExDetail(ex){
+  const isCardio=!!ex.isCardio;
+  const exd=EXDATA[ex.name];
+  const hasGif=exd&&exd.gif;
+  const hasData=exd&&(exd.gif||exd.note);
+  const notes=getNote(ex.id,ex.name);
+
+  const gifSrc=hasGif?`${GIF_BASE}${exd.gif}`:'';
+  const gifHtml=hasGif
+    ?`<img class="ex-gif-img" src="${gifSrc}" alt="${esc(ex.name)}"
+        onload="document.getElementById('gif-ph-${ex.id}').style.display='none'"
+        onerror="this.style.display='none';document.getElementById('gif-ph-${ex.id}').style.display='none'"
+      /><div class="ex-gif-none" id="gif-ph-${ex.id}" style="display:none">Loading…</div>`
+    :``;
+
+  const setsOrCardio=isCardio?renderCardioInputs(ex.id):renderSets(ex.id);
+
+  return `<div class="ex-main-row">
+${hasGif?`<div class="ex-gif-col">${gifHtml}</div>`:''}
+<div class="ex-sets-col${hasGif?'':' ex-sets-full'}">${setsOrCardio}</div>
+</div>
+<button class="form-toggle has-data" id="ftog-${ex.id}" onclick="toggleForm('${ex.id}')">
+<i class="ftarr">▶</i> Comments
+</button>
+<div class="form-body" id="fbody-${ex.id}">
+<div class="notes-label">Comments</div>
+<textarea class="notes-ta" maxlength="${MAX_NOTES}"
+placeholder="Form cues, trainer tips, personal notes…"
+oninput="onNotesChange('${ex.id}',this)"
+>${esc(notes)}</textarea>
+<div class="notes-count" id="ncount-${ex.id}">${notes.length}/${MAX_NOTES}</div>
+</div>
+<button class="log-btn" id="logbtn-${ex.id}"
+onclick="logExercise('${ex.id}','${esc(ex.name)}',${isCardio})">Log</button>`;
+}
+
+function renderSets(exId){
+  return `<div>
+<div class="sets-hdr"><span></span><span>lbs</span><span></span><span>reps</span></div>
+${[1,2,3].map(i=>`<div class="set-row">
+<div class="set-num">S${i}</div>
+<input class="set-inp" type="number" inputmode="decimal" placeholder="—" id="w-${exId}-${i}"/>
+<div class="set-sep">×</div>
+<input class="set-inp" type="number" inputmode="numeric" placeholder="—" id="r-${exId}-${i}"/>
+</div>`).join('')}
+</div>`;
+}
+
+function renderCardioInputs(exId){
+  return `<div class="cardio-wrap">
+<div class="inp-grp">
+<label>Duration (min)</label>
+<input type="number" inputmode="numeric" placeholder="30" id="cdur-${exId}"/>
+</div>
+<div class="inp-grp">
+<label>Intensity</label>
+<select id="cint-${exId}">
+<option value="">—</option>
+<option>Low</option><option>Moderate</option><option>High</option><option>Max</option>
+</select>
+</div>
+</div>`;
+}
+
+function renderHistorySection(){
+  const d=getDB();
+  const today=todayKey();
+  const keys=Object.keys(d.logs||{}).sort().reverse().filter(k=>k!==today);
+  if(!keys.length)return`<button class="history-toggle-btn" style="cursor:default;opacity:.45">📅 No past workouts yet</button>
+<button class="export-btn" style="margin-top:10px" onclick="exportJSON()">Export All Data as JSON</button>`;
+  return `<div id="history-section">
+<button class="history-toggle-btn" onclick="toggleHistory(this)">
+<span>📅 Past Workouts</span> <i style="font-style:normal;color:var(--muted)">▶</i>
+</button>
+<div id="history-body" style="display:none;margin-top:10px">
+${keys.map(key=>{
+  const entries=d.logs[key];
+  return`<div class="history-day">
+<div class="history-day-hdr">${formatDate(key)}<span class="history-day-count">${entries.length} exercise${entries.length!==1?'s':''}</span></div>
+${entries.map(e=>{
+  const sets=e.isCardio?`${e.duration||'—'}min · ${e.intensity||'—'}`
+    :e.sets.map((s,i)=>`S${i+1}:${s.weight||0}lbs×${s.reps||0}`).join(' · ');
+  return`<div class="history-entry">
+<div class="history-entry-name">${esc(e.name)}${e.alias?` <em style="color:var(--muted);font-size:11px">"${esc(e.alias)}"</em>`:''}</div>
+<div class="history-entry-sets">${sets}</div>
+</div>`;
+}).join('')}
+</div>`;
+}).join('')}
+<button class="export-btn" onclick="exportJSON()">Export All Data as JSON</button>
+</div>
+</div>`;
+}
+
+// ── ACTIONS ──────────────────────────────────────────────
+
+function onDateChange(val){
+  currentDate=val;
+  refreshToday();
+  refreshGroupCounts();
+  openGroups.forEach(gid=>{
+    const el=document.getElementById('gbody-'+gid);
+    if(el&&el.classList.contains('open'))el.innerHTML=renderExerciseList(gid);
+  });
+  if(searchQuery)renderSearch();
+}
+
+function toggleGroup(gid){
+  const body=document.getElementById('gbody-'+gid);
+  const arrow=document.getElementById('garr-'+gid);
+  if(openGroups.has(gid)){
+    openGroups.delete(gid);
+    body.classList.remove('open');body.innerHTML='';
+    if(arrow)arrow.style.transform='';
+  } else {
+    openGroups.add(gid);
+    body.innerHTML=renderExerciseList(gid);
+    body.classList.add('open');
+    if(arrow)arrow.style.transform='rotate(90deg)';
+  }
+}
+
+function toggleExercise(exId,gid){
+  const det=document.getElementById('exdet-'+exId);
+  const arr=document.getElementById('earr-'+exId);
+  if(!det)return;
+  if(openExercises.has(exId)){
+    openExercises.delete(exId);
+    det.classList.remove('open');det.innerHTML='';
+    if(arr)arr.classList.remove('open');
+  } else {
+    openExercises.add(exId);
+    const ex=getExercises(gid).find(e=>e.id===exId)||{id:exId,name:'',isCardio:gid==='cardio'};
+    det.innerHTML=renderExDetail(ex);
+    det.classList.add('open');
+    if(arr)arr.classList.add('open');
+  }
+}
+
+function toggleForm(exId){
+  const tog=document.getElementById('ftog-'+exId);
+  const body=document.getElementById('fbody-'+exId);
+  if(!body)return;
+  const isOpen=body.classList.toggle('open');
+  if(tog)tog.classList.toggle('open',isOpen);
+}
+
+function onNotesChange(exId,textarea){
+  const val=textarea.value;
+  setCustomField(exId,'notes',val);
+  const c=document.getElementById('ncount-'+exId);
+  if(c)c.textContent=`${val.length}/${MAX_NOTES}`;
+}
+
+function logExercise(exId,exName,isCardio){
+  const custom=getCustom(exId);
+  let entry;
+  if(isCardio){
+    entry={exerciseId:exId,name:exName,alias:custom.alias||'',isCardio:true,
+      duration:document.getElementById('cdur-'+exId)?.value||'',
+      intensity:document.getElementById('cint-'+exId)?.value||'',ts:Date.now()};
+  } else {
+    entry={exerciseId:exId,name:exName,alias:custom.alias||'',isCardio:false,
+      sets:[1,2,3].map(i=>({weight:document.getElementById(`w-${exId}-${i}`)?.value||'',reps:document.getElementById(`r-${exId}-${i}`)?.value||''})),
+      ts:Date.now()};
+  }
+  addLogEntry(currentDate,entry);
+  showToast(exName+' logged ✓');
+  const btn=document.getElementById('logbtn-'+exId);
+  if(btn){btn.textContent='Done ✓';btn.classList.add('done');setTimeout(()=>{btn.textContent='Log';btn.classList.remove('done')},2000)}
+  refreshToday();
+  refreshGroupCounts();
+  // add logged dot to list row if visible
+  const rowRight=document.querySelector(`#exitem-${exId} .ex-row-right`);
+  if(rowRight&&!rowRight.querySelector('.ex-logged-dot')){
+    const dot=document.createElement('span');dot.className='ex-logged-dot';rowRight.prepend(dot);
+  }
+  ghSave();
+}
+
+function deleteEntry(index){
+  if(!confirm('Delete this entry?'))return;
+  deleteLogEntry(currentDate,index);
+  refreshToday();
+  refreshGroupCounts();
+  ghSave();
+}
+
+function addExercise(gid){
+  const name=prompt('Exercise name:');
+  if(!name||!name.trim())return;
+  const d=getDB();
+  if(!d.userExercises[gid])d.userExercises[gid]=[];
+  const ex={id:'u-'+Date.now(),name:name.trim(),isUser:true};
+  if(gid==='cardio')ex.isCardio=true;
+  d.userExercises[gid].push(ex);saveDB(d);
+  if(openGroups.has(gid))document.getElementById('gbody-'+gid).innerHTML=renderExerciseList(gid);
+}
+
+function refreshToday(){
+  const logs=getLogsForDate(currentDate);
+  const label=formatDateShort(currentDate);
+  const el=document.getElementById('today-entries');
+  if(!el)return;
+  const pill=document.querySelector('.today-date-pill');
+  if(pill)pill.textContent=label;
+  if(!logs.length){el.innerHTML=`<div class="today-empty">No exercises logged for ${label} yet.</div>`;return}
+  el.innerHTML=logs.map((e,i)=>{
+    const sets=e.isCardio?`${e.duration||'—'} min · ${e.intensity||'—'}`
+      :e.sets.map((s,si)=>`S${si+1}: ${s.weight||0} lbs × ${s.reps||0}`).join(' · ');
+    return`<div class="today-entry">
+<div>
+<div class="today-entry-name">${esc(e.name)}${e.alias?` <span style="color:var(--accent);font-style:italic;font-size:13px;font-weight:400">"${esc(e.alias)}"</span>`:''}</div>
+<div class="today-entry-sets">${sets}</div>
+</div>
+<div class="today-entry-right">
+<span class="entry-time">${formatTime(e.ts)}</span>
+<button class="del-btn" onclick="deleteEntry(${i})">×</button>
+</div>
+</div>`;
+  }).join('');
+}
+
+function refreshGroupCounts(){
+  const logs=getLogsForDate(currentDate);
+  GROUPS.forEach(g=>{
+    const count=logs.filter(e=>getExercises(g.id).some(ex=>ex.id===e.exerciseId)).length;
+    const el=document.getElementById('gcnt-'+g.id);
+    if(el){el.textContent=count;el.classList.toggle('show',count>0)}
+  });
+}
+
+function toggleHistory(btn){
+  const body=document.getElementById('history-body');
+  const isNowOpen=body.style.display==='none';
+  body.style.display=isNowOpen?'block':'none';
+  const arrow=btn.querySelector('i');
+  if(arrow)arrow.style.transform=isNowOpen?'rotate(90deg)':'';
+}
+
+function exportJSON(){
+  const d=getDB();
+  const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`gym-log-${todayKey()}.json`;a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ── SETTINGS ─────────────────────────────────────────────
+
+function openSettings(){
+  const cfg=getGHConfig();
+  document.getElementById('ghUser').value=cfg?.username||'';
+  document.getElementById('ghRepo').value=cfg?.repo||'gym-data';
+  document.getElementById('ghToken').value=cfg?.token||'';
+  document.getElementById('settingsModal').classList.add('open');
+}
+function closeSettings(){document.getElementById('settingsModal').classList.remove('open')}
+
+async function saveGHSettings(){
+  const username=document.getElementById('ghUser').value.trim();
+  const repo=document.getElementById('ghRepo').value.trim();
+  const token=document.getElementById('ghToken').value.trim();
+  if(!username||!repo||!token){alert('Fill in all three fields.');return}
+  setGHConfig({username,repo,token});ghSha=null;closeSettings();
+  const remote=await ghLoad();
+  if(remote){
+    const local=getDB();
+    for(const[date,entries]of Object.entries(local.logs||{})){if(!remote.logs[date])remote.logs[date]=entries}
+    remote.custom={...remote.custom,...local.custom};
+    remote.userExercises={...remote.userExercises,...local.userExercises};
+    saveDB(remote);renderPage();showToast('Synced from GitHub ✓');
+  } else {
+    await ghSave();showToast('Connected & uploaded ✓');
+  }
+}
+
+function clearGHSettings(){
+  if(!confirm('Disconnect GitHub? Local data stays.'))return;
+  clearGHConfig();setSyncBadge('local');closeSettings();
+}
+
+// ── INIT ─────────────────────────────────────────────────
+
+async function init(){
+  currentDate=todayKey();
+  document.getElementById('dateInp').value=currentDate;
+  const cfg=getGHConfig();
+  if(cfg){
+    setSyncBadge('busy');
+    const remote=await ghLoad();
+    if(remote){
+      const local=getDB();
+      for(const[date,entries]of Object.entries(local.logs||{})){if(!remote.logs[date])remote.logs[date]=entries}
+      remote.custom={...remote.custom,...local.custom};
+      remote.userExercises={...remote.userExercises,...local.userExercises};
+      saveDB(remote);
+    }
+  } else {
+    setSyncBadge('local');
+  }
+  renderPage();
+}
+
+init();
+</script>
+</body>
+</html>
